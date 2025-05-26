@@ -23,7 +23,12 @@ const setRefreshTokenCookie = (res, token) => {
 
 
 const register = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name,
+        email,
+        password,
+        phone,
+        role,
+        profile } = req.body;
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -34,7 +39,10 @@ const register = async (req, res) => {
         const newUser = await User.create({
             name,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            phone,
+            role: role || "user",
+            profile
         });
 
         const accessToken = generateAccessToken(newUser);
