@@ -4,9 +4,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const { validationResult } = require('express-validator');
 const AppError = require('./utils/appError');
-const connectDB = require('./config/database');
+const mongoSanitize = require('express-mongo-sanitize');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 // Initialize express app
@@ -14,38 +14,34 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true
+}));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Body parser
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000, // 15 minutes
+    windowMs: process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000, // 1 hour
     max: process.env.RATE_LIMIT_MAX || 100 // limit each IP to 100 requests per windowMs
 });
 app.use('/api', limiter);
-
-// Body parser middleware
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Validation result middleware
-app.use((req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            status: 'error',
-            errors: errors.array()
-        });
-    }
-    next();
-});
-
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API routes
 app.use('/api/v1/health', (req, res) => {
@@ -57,100 +53,58 @@ app.use('/api/v1/health', (req, res) => {
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes'); // <-- This was the missing import
+const bloodDonorRoutes = require('./routes/bloodDonorRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const geoFenceRoutes = require('./routes/geoFenceRoutes');
+const telemedicineRoutes = require('./routes/telemedicineRoutes');
+const medicationReminderRoutes = require('./routes/medicationReminderRoutes');
+const emergencySOSRoutes = require('./routes/emergencySOSRoutes');
+const healthRecordRoutes = require('./routes/healthRecordRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const emergencyRoutes = require('./routes/emergencyRoutes');
+const mentalHealthRoutes = require('./routes/mentalHealthRoutes');
+const ngoRoutes = require('./routes/ngoRoutes');
+const publicHealthRoutes = require('./routes/publicHealthRoutes');
 const labReportRoutes = require('./routes/labReportRoutes');
+const governmentSchemeRoutes = require('./routes/governmentSchemeRoutes');
+const healthEducationRoutes = require('./routes/healthEducationRoutes');
+
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 
 // Mount routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/blood-donors', bloodDonorRoutes);
+app.use('/api/v1/prescriptions', prescriptionRoutes);
+app.use('/api/v1/geo-fences', geoFenceRoutes);
+app.use('/api/v1/telemedicine', telemedicineRoutes);
+app.use('/api/v1/medication-reminders', medicationReminderRoutes);
+app.use('/api/v1/emergency-sos', emergencySOSRoutes);
+app.use('/api/v1/health-records', healthRecordRoutes);
 app.use('/api/v1/appointments', appointmentRoutes);
+app.use('/api/v1/doctors', doctorRoutes);
+app.use('/api/v1/reviews', reviewRoutes);
+app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/emergency', emergencyRoutes);
+app.use('/api/v1/mental-health', mentalHealthRoutes);
+app.use('/api/v1/ngo', ngoRoutes);
+app.use('/api/v1/public-health', publicHealthRoutes);
 app.use('/api/v1/lab-reports', labReportRoutes);
+app.use('/api/v1/government-schemes', governmentSchemeRoutes);
+app.use('/api/v1/health-education', healthEducationRoutes);
 
-// Handle undefined routes - must be after all valid routes
-app.all('*', (req, res, next) => {
+
+// Error handling middleware
+app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// Error handling middleware - must be last
 app.use(errorHandler);
 
-// Start server function
-const startServer = async () => {
-    try {
-        // Connect to MongoDB
-        const dbConnection = await connectDB();
-        if (!dbConnection) {
-            console.error('Failed to connect to MongoDB. Retrying in 5 seconds...');
-            setTimeout(startServer, 5000);
-            return;
-        }
-
-        // Start the server
-        const port = process.env.PORT || 7000;
-        let server;
-        
-        const tryStartServer = (portToTry) => {
-            return new Promise((resolve, reject) => {
-                server = app.listen(portToTry, () => {
-                    console.log(`🚀 Server running on port ${portToTry} in ${process.env.NODE_ENV} mode`);
-                    resolve(server);
-                });
-
-                server.on('error', (error) => {
-                    if (error.code === 'EADDRINUSE') {
-                        console.log(`Port ${portToTry} is in use, trying ${portToTry + 1}...`);
-                        server.close();
-                        resolve(null); // Signal to try next port
-                    } else {
-                        reject(error);
-                    }
-                });
-            });
-        };
-
-        // Try ports sequentially until we find an available one
-        let currentPort = port;
-        while (currentPort < port + 10) { // Try up to 10 ports
-            try {
-                server = await tryStartServer(currentPort);
-                if (server) break; // If server started successfully
-                currentPort++;
-            } catch (error) {
-                console.error('Error starting server:', error);
-                process.exit(1);
-            }
-        }
-
-        if (!server) {
-            console.error('Could not find an available port. Please check your system.');
-            process.exit(1);
-        }
-
-        // Handle unhandled promise rejections
-        process.on('unhandledRejection', (err) => {
-            console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-            console.error(err.name, err.message);
-            server.close(() => {
-                process.exit(1);
-            });
-        });
-
-        // Handle uncaught exceptions
-        process.on('uncaughtException', (err) => {
-            console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
-            console.error(err.name, err.message);
-            process.exit(1);
-        });
-
-    } catch (error) {
-        console.error('Error starting server:', error);
-        process.exit(1);
-    }
-};
-
-// Start the server
-startServer();
-
-module.exports = app; 
+module.exports = app;

@@ -12,7 +12,6 @@ describe('Authentication Endpoints', () => {
                     name: 'John Doe',
                     email: 'john@example.com',
                     password: 'Password123!',
-                    passwordConfirm: 'Password123!',
                     phoneNumber: '+1234567890',
                     dateOfBirth: '1990-01-01',
                     gender: 'male',
@@ -39,8 +38,7 @@ describe('Authentication Endpoints', () => {
                 .send({
                     name: 'John Doe',
                     email: 'invalid-email',
-                    password: 'weak',
-                    passwordConfirm: 'weak'
+                    password: 'weak'
                 });
 
             expect(res.statusCode).toBe(400);
@@ -56,14 +54,14 @@ describe('Authentication Endpoints', () => {
                     name: 'Dr. Jane Smith',
                     email: 'jane@example.com',
                     password: 'Password123!',
-                    passwordConfirm: 'Password123!',
                     phoneNumber: '+1234567890',
                     specialization: 'Cardiology',
                     licenseNumber: 'MD123456',
                     qualifications: [{
                         degree: 'MD',
                         institution: 'Harvard Medical School',
-                        year: 2010
+                        year: 2010,
+                        country: 'USA'
                     }],
                     clinicDetails: {
                         name: 'Heart Care Clinic',
@@ -85,8 +83,7 @@ describe('Authentication Endpoints', () => {
                 .send({
                     name: 'Dr. Jane Smith',
                     email: 'invalid-email',
-                    password: 'weak',
-                    passwordConfirm: 'weak'
+                    password: 'weak'
                 });
 
             expect(res.statusCode).toBe(400);
@@ -158,7 +155,6 @@ describe('Authentication Endpoints', () => {
                 .send({
                     currentPassword: 'Password123!',
                     newPassword: 'NewPassword123!',
-                    newPasswordConfirm: 'NewPassword123!'
                 });
 
             expect(res.statusCode).toBe(200);
@@ -175,11 +171,10 @@ describe('Authentication Endpoints', () => {
                 .send({
                     currentPassword: 'WrongPassword123!',
                     newPassword: 'NewPassword123!',
-                    newPasswordConfirm: 'NewPassword123!'
                 });
 
             expect(res.statusCode).toBe(401);
             expect(res.body.status).toBe('error');
         });
     });
-}); 
+});

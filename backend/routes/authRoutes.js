@@ -6,7 +6,7 @@ const AppError = require('../utils/appError');
 
 const router = express.Router();
 
-// Validation middleware
+// Validation middleware for common user fields
 const validateRegistration = [
     body('name')
         .trim()
@@ -93,6 +93,28 @@ const validateRegistration = [
         .trim()
         .matches(/^\d{5}(-\d{4})?$/)
         .withMessage('Please provide a valid ZIP code'),
+];
+
+// CORRECTED: This validation now aligns with the Doctor model schema.
+const validateDoctorRegistration = [
+    ...validateRegistration,
+    body('specialization').trim().notEmpty().withMessage('Specialization is required'),
+    body('licenseNumber').trim().notEmpty().withMessage('License number is required'),
+    body('registrationNumber').trim().notEmpty().withMessage('Registration number is required'),
+    body('consultationFee').isFloat({ min: 0 }).withMessage('Consultation fee must be a positive number'),
+    
+    // Validate council object
+    body('council').isObject().withMessage('Council details are required'),
+    body('council.name').trim().notEmpty().withMessage('Council name is required'),
+    body('council.year').isInt({ min: 1900, max: new Date().getFullYear() }).withMessage('Invalid council registration year'),
+    body('council.country').trim().notEmpty().withMessage('Council country is required'),
+
+    // Validate qualifications array
+    body('qualifications').isArray({ min: 1 }).withMessage('At least one qualification is required'),
+    body('qualifications.*.degree').trim().notEmpty().withMessage('Degree is required for each qualification'),
+    body('qualifications.*.institution').trim().notEmpty().withMessage('Institution is required for each qualification'),
+    body('qualifications.*.year').isInt({ min: 1900, max: new Date().getFullYear() }).withMessage('Invalid year for qualification'),
+    body('qualifications.*.country').trim().notEmpty().withMessage('Country is required for each qualification'),
 
     // Validation result middleware
     (req, res, next) => {
@@ -105,22 +127,8 @@ const validateRegistration = [
     }
 ];
 
-const validateDoctorRegistration = [
-    ...validateRegistration,
-    body('specialization').trim().notEmpty().withMessage('Specialization is required'),
-    body('licenseNumber').trim().notEmpty().withMessage('License number is required'),
-    body('qualifications').isArray().withMessage('Qualifications must be an array'),
-    body('qualifications.*.degree').trim().notEmpty().withMessage('Degree is required'),
-    body('qualifications.*.institution').trim().notEmpty().withMessage('Institution is required'),
-    body('qualifications.*.year').isInt({ min: 1900, max: new Date().getFullYear() }).withMessage('Invalid year'),
-    body('clinicDetails.name').trim().notEmpty().withMessage('Clinic name is required'),
-    body('clinicDetails.consultationFee').isFloat({ min: 0 }).withMessage('Consultation fee must be a positive number')
-];
-
-// Public routes
-router.post('/register/patient', validateRegistration, authController.registerPatient);
-router.post('/register/doctor', validateDoctorRegistration, authController.registerDoctor);
-router.post('/login', [
+// Validation middleware for login
+const validateLogin = [
     body('email').trim().notEmpty().withMessage('Email is required').isEmail().withMessage('Please provide a valid email'),
     body('password').trim().notEmpty().withMessage('Password is required'),
     (req, res, next) => {
@@ -131,15 +139,20 @@ router.post('/login', [
         }
         next();
     }
-], authController.login);
+];
+
+// --- Public Routes ---
+router.post('/register/patient', validateRegistration, authController.registerPatient);
+router.post('/register/doctor', validateDoctorRegistration, authController.registerDoctor);
+router.post('/login', validateLogin, authController.login);
 router.post('/forgot-password', authController.forgotPassword);
 router.patch('/reset-password/:token', authController.resetPassword);
-router.get('/verify-email/:token', verifyEmail);
+router.get('/verify-email/:token', authController.verifyEmail); // Corrected: Controller handles logic
 
-// Protected routes
+// --- Protected Routes ---
 router.use(protect); // All routes after this middleware require authentication
 router.get('/me', authController.getMe);
 router.post('/logout', authController.logout);
 router.patch('/update-password', authController.updatePassword);
 
-module.exports = router; 
+module.exports = router;

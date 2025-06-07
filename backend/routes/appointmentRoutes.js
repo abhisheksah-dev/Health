@@ -1,55 +1,65 @@
+// ./routes/appointmentRoutes.js
+
 const express = require('express');
-const { body } = require('express-validator');
+const { body, query, param } = require('express-validator');
 const appointmentController = require('../controllers/appointmentController');
 const { protect, restrictTo } = require('../middleware/authMiddleware');
 const validateRequest = require('../middleware/validateRequest');
+const { validateObjectId } = require('../middleware/validation'); // This now imports the real function
+const upload = require('../middleware/uploadMiddleware');
 
 const router = express.Router();
 
-// Protect all routes
 router.use(protect);
 
-// Validation middleware
 const appointmentValidation = [
-    body('doctor').isMongoId().withMessage('Invalid doctor ID'),
-    body('date').isISO8601().withMessage('Invalid date format'),
+    // MODIFIED: This now checks for existence and provides a more accurate error message.
+    body('doctor')
+        .custom((id) => validateObjectId(id, 'Doctor')) // The model name is 'Doctor'
+        .withMessage('A valid doctor ID is required and the doctor must exist.'),
+
+    body('date').isISO8601().toDate().withMessage('Invalid date format'),
     body('startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Invalid start time format'),
     body('endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Invalid end time format'),
-    body('type').isIn(['consultation', 'follow-up', 'emergency', 'routine-checkup']).withMessage('Invalid appointment type'),
+    body('type').isIn(['consultation', 'follow-up', 'checkup', 'emergency', 'other']).withMessage('Invalid appointment type'),
     body('reason').notEmpty().withMessage('Please provide a reason for the appointment'),
+    body('facility').optional().isJSON().withMessage('Facility must be a valid JSON string if provided'),
     validateRequest
 ];
 
 const statusUpdateValidation = [
-    body('status').isIn(['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'])
-        .withMessage('Invalid appointment status'),
-    body('cancellationReason').if(body('status').equals('cancelled'))
-        .notEmpty().withMessage('Please provide a reason for cancellation'),
+    body('status').isIn(['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show']).withMessage('Invalid appointment status'),
+    body('cancellationReason').if(body('status').equals('cancelled')).notEmpty().withMessage('Please provide a reason for cancellation'),
     validateRequest
 ];
 
-// Routes
-router.post('/', appointmentValidation, appointmentController.createAppointment);
-router.get('/my-appointments', appointmentController.getMyAppointments);
-router.get('/available-slots', appointmentController.getAvailableSlots);
+// --- User & Doctor accessible routes ---
+router.get('/my-appointments', appointmentController.getUserAppointments);
+router.get('/available-slots', appointmentController.getAvailableTimeSlots);
+router.get('/:id', param('id').custom(id => validateObjectId(id, 'Appointment')), validateRequest, appointmentController.getAppointment);
 
-// Doctor only routes
-router.get('/stats', 
-    restrictTo('doctor'), 
-    appointmentController.getAppointmentStats
+// --- Patient specific routes ---
+router.post(
+    '/',
+    upload.array('documents', 5), // Handles file uploads
+    appointmentValidation,
+    appointmentController.createAppointment
 );
 
-// Appointment management routes
-router.route('/:id')
-    .get(appointmentController.getAppointment)
-    .patch(
-        restrictTo('doctor'),
-        appointmentController.updateAppointmentDetails
-    );
+router.patch('/:id/cancel', param('id').custom(id => validateObjectId(id, 'Appointment')), validateRequest, appointmentController.cancelAppointment);
+router.patch('/:id/reschedule', param('id').custom(id => validateObjectId(id, 'Appointment')), validateRequest, appointmentController.rescheduleAppointment);
 
-router.patch('/:id/status', 
+// --- Doctor & Admin specific routes ---
+router.patch(
+    '/:id/status',
+    restrictTo('doctor', 'admin'),
+    param('id').custom(id => validateObjectId(id, 'Appointment')),
     statusUpdateValidation,
     appointmentController.updateAppointmentStatus
 );
+router.get('/stats', restrictTo('admin', 'doctor'), appointmentController.getAppointmentStats);
 
-module.exports = router; 
+// --- Admin only routes ---
+router.get('/', restrictTo('admin'), appointmentController.getAllAppointments);
+
+module.exports = router;

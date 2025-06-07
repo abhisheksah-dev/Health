@@ -1,232 +1,350 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const reviewSchema = new mongoose.Schema({
-    patient: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'User',
-        required: [true, 'Review must belong to a patient']
+const reportSchema = new Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Report must have a user']
+  },
+  reason: {
+    type: String,
+    enum: ['inappropriate', 'spam', 'fake', 'offensive', 'other'],
+    required: [true, 'Report must have a reason']
+  },
+  details: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Report details cannot exceed 500 characters']
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'resolved', 'dismissed'],
+    default: 'pending'
+  },
+  adminNotes: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Admin notes cannot exceed 500 characters']
+  },
+  resolvedAt: Date,
+  resolvedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }
+}, {
+  timestamps: true
+});
+
+const imageSchema = new Schema({
+  url: {
+    type: String,
+    required: [true, 'Image must have a URL']
+  },
+  publicId: {
+    type: String,
+    required: [true, 'Image must have a public ID']
+  }
+});
+
+const reviewSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Review must belong to a user']
+  },
+  appointment: {
+    type: Schema.Types.ObjectId,
+    ref: 'Appointment',
+    required: [true, 'Review must be associated with an appointment']
+  },
+  doctor: {
+    type: Schema.Types.ObjectId,
+    ref: 'Doctor',
+    required: [true, 'Review must be for a doctor']
+  },
+  facility: {
+    type: {
+      type: String,
+      enum: ['hospital', 'clinic'],
+      required: true
     },
-    doctor: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'Doctor',
-        required: [true, 'Review must be for a doctor']
+    id: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      refPath: 'facility.type'
+    }
+  },
+  rating: {
+    overall: {
+      type: Number,
+      required: [true, 'Overall rating is required'],
+      min: 1,
+      max: 5
     },
-    appointment: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'Appointment',
-        required: [true, 'Review must be associated with an appointment']
-    },
-    rating: {
+    categories: {
+      doctor: {
         type: Number,
-        required: [true, 'Please provide a rating'],
+        required: [true, 'Doctor rating is required'],
         min: 1,
         max: 5
-    },
-    review: {
-        type: String,
-        required: [true, 'Please provide a review'],
-        trim: true,
-        maxlength: [500, 'Review cannot be more than 500 characters']
-    },
-    categories: [{
-        type: String,
-        enum: ['professionalism', 'communication', 'punctuality', 'treatment', 'facility', 'staff', 'value']
-    }],
-    categoryRatings: {
-        professionalism: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        communication: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        punctuality: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        treatment: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        facility: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        staff: {
-            type: Number,
-            min: 1,
-            max: 5
-        },
-        value: {
-            type: Number,
-            min: 1,
-            max: 5
-        }
-    },
-    isAnonymous: {
-        type: Boolean,
-        default: false
-    },
-    isVerified: {
-        type: Boolean,
-        default: false
-    },
-    doctorResponse: {
-        response: String,
-        respondedAt: Date
-    },
-    helpfulVotes: {
-        count: {
-            type: Number,
-            default: 0
-        },
-        voters: [{
-            type: mongoose.Schema.ObjectId,
-            ref: 'User'
-        }]
-    },
-    reportCount: {
+      },
+      facility: {
         type: Number,
-        default: 0
-    },
-    reports: [{
-        reportedBy: {
-            type: mongoose.Schema.ObjectId,
-            ref: 'User'
-        },
-        reason: {
-            type: String,
-            enum: ['inappropriate', 'fake', 'spam', 'other']
-        },
-        details: String,
-        reportedAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected', 'hidden'],
-        default: 'pending'
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
+        required: [true, 'Facility rating is required'],
+        min: 1,
+        max: 5
+      },
+      staff: {
+        type: Number,
+        required: [true, 'Staff rating is required'],
+        min: 1,
+        max: 5
+      },
+      value: {
+        type: Number,
+        required: [true, 'Value rating is required'],
+        min: 1,
+        max: 5
+      }
     }
+  },
+  title: {
+    type: String,
+    required: [true, 'Review title is required'],
+    trim: true,
+    maxlength: [100, 'Title cannot be more than 100 characters']
+  },
+  content: {
+    type: String,
+    required: [true, 'Review content is required'],
+    trim: true,
+    maxlength: [1000, 'Content cannot be more than 1000 characters']
+  },
+  pros: [{
+    type: String,
+    trim: true,
+    maxlength: [100, 'Pro point cannot be more than 100 characters']
+  }],
+  cons: [{
+    type: String,
+    trim: true,
+    maxlength: [100, 'Con point cannot be more than 100 characters']
+  }],
+  images: [{
+    url: {
+      type: String,
+      required: true
+    },
+    publicId: {
+      type: String,
+      required: true
+    },
+    caption: String
+  }],
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  moderation: {
+    moderatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    moderatedAt: Date,
+    reason: String,
+    notes: String
+  },
+  helpful: {
+    count: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    users: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }]
+  },
+  report: {
+    count: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    reasons: [{
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      reason: {
+        type: String,
+        enum: [
+          'inappropriate_content',
+          'fake_review',
+          'offensive_language',
+          'irrelevant',
+          'other'
+        ],
+        required: true
+      },
+      details: String,
+      reportedAt: Date
+    }]
+  },
+  response: {
+    from: {
+      type: String,
+      enum: ['doctor', 'facility'],
+      required: true
+    },
+    content: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [1000, 'Response cannot be more than 1000 characters']
+    },
+    respondedAt: Date,
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    }
+  }
 }, {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Indexes
+reviewSchema.index({ user: 1, appointment: 1 }, { unique: true });
 reviewSchema.index({ doctor: 1, createdAt: -1 });
-reviewSchema.index({ patient: 1, doctor: 1 }, { unique: true });
-reviewSchema.index({ appointment: 1 }, { unique: true });
-reviewSchema.index({ rating: 1 });
+reviewSchema.index({ 'facility.id': 1, createdAt: -1 });
+reviewSchema.index({ status: 1, createdAt: -1 });
+reviewSchema.index({ 'rating.overall': -1 });
+reviewSchema.index({ 'helpful.count': -1 });
 
-// Prevent duplicate reviews for the same appointment
+// Virtual for average category rating
+reviewSchema.virtual('averageCategoryRating').get(function() {
+  const categories = this.rating.categories;
+  const sum = Object.values(categories).reduce((a, b) => a + b, 0);
+  return sum / Object.keys(categories).length;
+});
+
+// Pre-save middleware to validate appointment
 reviewSchema.pre('save', async function(next) {
-    if (this.isNew) {
-        const existingReview = await this.constructor.findOne({
-            appointment: this.appointment
-        });
-        if (existingReview) {
-            next(new Error('Review already exists for this appointment'));
-        }
+  if (this.isNew) {
+    const Appointment = mongoose.model('Appointment');
+    const appointment = await Appointment.findById(this.appointment);
+    
+    if (!appointment) {
+      return next(new Error('Appointment not found'));
     }
-    next();
+    
+    if (appointment.patient.toString() !== this.user.toString()) {
+      return next(new Error('Only the patient can review the appointment'));
+    }
+    
+    if (appointment.status !== 'completed') {
+      return next(new Error('Can only review completed appointments'));
+    }
+    
+    if (appointment.doctor.toString() !== this.doctor.toString()) {
+      return next(new Error('Doctor does not match the appointment'));
+    }
+    
+    if (appointment.facility.type !== this.facility.type || 
+        appointment.facility.id.toString() !== this.facility.id.toString()) {
+      return next(new Error('Facility does not match the appointment'));
+    }
+  }
+  next();
 });
 
-// Update doctor's average rating after review
-reviewSchema.post('save', async function() {
-    const stats = await this.constructor.aggregate([
-        {
-            $match: { 
-                doctor: this.doctor,
-                status: 'approved'
-            }
-        },
-        {
-            $group: {
-                _id: '$doctor',
-                averageRating: { $avg: '$rating' },
-                count: { $sum: 1 },
-                professionalism: { $avg: '$categoryRatings.professionalism' },
-                communication: { $avg: '$categoryRatings.communication' },
-                punctuality: { $avg: '$categoryRatings.punctuality' },
-                treatment: { $avg: '$categoryRatings.treatment' },
-                facility: { $avg: '$categoryRatings.facility' },
-                staff: { $avg: '$categoryRatings.staff' },
-                value: { $avg: '$categoryRatings.value' }
-            }
-        }
-    ]);
+// Static method to find reviews by doctor
+reviewSchema.statics.findByDoctor = function(doctorId, options = {}) {
+  const query = {
+    doctor: doctorId,
+    status: 'approved'
+  };
+  
+  if (options.rating) {
+    query['rating.overall'] = options.rating;
+  }
+  
+  if (options.facilityType) {
+    query['facility.type'] = options.facilityType;
+  }
+  
+  return this.find(query)
+    .populate('user', 'name avatar')
+    .populate('facility.id', 'name')
+    .sort(options.sort || { createdAt: -1 })
+    .skip(options.skip || 0)
+    .limit(options.limit || 10);
+};
 
-    if (stats.length > 0) {
-        await this.model('Doctor').findByIdAndUpdate(this.doctor, {
-            'rating.average': Math.round(stats[0].averageRating * 10) / 10,
-            'rating.count': stats[0].count,
-            'rating.categories': {
-                professionalism: Math.round(stats[0].professionalism * 10) / 10,
-                communication: Math.round(stats[0].communication * 10) / 10,
-                punctuality: Math.round(stats[0].punctuality * 10) / 10,
-                treatment: Math.round(stats[0].treatment * 10) / 10,
-                facility: Math.round(stats[0].facility * 10) / 10,
-                staff: Math.round(stats[0].staff * 10) / 10,
-                value: Math.round(stats[0].value * 10) / 10
-            }
-        });
+// Static method to find reviews by facility
+reviewSchema.statics.findByFacility = function(facilityId, facilityType, options = {}) {
+  const query = {
+    'facility.id': facilityId,
+    'facility.type': facilityType,
+    status: 'approved'
+  };
+  
+  if (options.rating) {
+    query['rating.overall'] = options.rating;
+  }
+  
+  return this.find(query)
+    .populate('user', 'name avatar')
+    .populate('doctor', 'userId specialization')
+    .populate('doctor.userId', 'name avatar')
+    .sort(options.sort || { createdAt: -1 })
+    .skip(options.skip || 0)
+    .limit(options.limit || 10);
+};
+
+// Static method to calculate average ratings
+reviewSchema.statics.calculateAverageRatings = async function(doctorId, facilityId, facilityType) {
+  const match = {
+    status: 'approved'
+  };
+  
+  if (doctorId) {
+    match.doctor = doctorId;
+  }
+  
+  if (facilityId && facilityType) {
+    match['facility.id'] = facilityId;
+    match['facility.type'] = facilityType;
+  }
+  
+  const result = await this.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: null,
+        averageOverall: { $avg: '$rating.overall' },
+        averageDoctor: { $avg: '$rating.categories.doctor' },
+        averageFacility: { $avg: '$rating.categories.facility' },
+        averageStaff: { $avg: '$rating.categories.staff' },
+        averageValue: { $avg: '$rating.categories.value' },
+        count: { $sum: 1 }
+      }
     }
-});
-
-// Static method to get doctor's reviews with filters
-reviewSchema.statics.getDoctorReviews = async function(doctorId, options = {}) {
-    const query = this.find({ 
-        doctor: doctorId,
-        status: 'approved'
-    })
-    .populate('patient', 'name profilePicture')
-    .populate('appointment', 'date type')
-    .sort({ createdAt: -1 });
-
-    if (options.rating) {
-        query.where('rating').equals(options.rating);
-    }
-
-    if (options.category) {
-        query.where(`categoryRatings.${options.category}`).exists();
-    }
-
-    if (options.startDate && options.endDate) {
-        query.where('createdAt').gte(options.startDate).lte(options.endDate);
-    }
-
-    const page = options.page * 1 || 1;
-    const limit = options.limit * 1 || 10;
-    const skip = (page - 1) * limit;
-
-    query.skip(skip).limit(limit);
-
-    const reviews = await query;
-    const total = await this.countDocuments({ doctor: doctorId, status: 'approved' });
-
-    return {
-        reviews,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-    };
+  ]);
+  
+  return result[0] || {
+    averageOverall: 0,
+    averageDoctor: 0,
+    averageFacility: 0,
+    averageStaff: 0,
+    averageValue: 0,
+    count: 0
+  };
 };
 
 const Review = mongoose.model('Review', reviewSchema);

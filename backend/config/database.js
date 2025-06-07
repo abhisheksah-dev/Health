@@ -16,24 +16,20 @@ const connectDB = async () => {
         });
 
         mongoose.connection.on('disconnected', () => {
-            console.warn('⚠️ MongoDB disconnected. Attempting to reconnect...');
+            console.warn('⚠️ MongoDB disconnected.');
         });
 
         process.on('SIGINT', async () => {
-            try {
-                await mongoose.connection.close();
-                console.log('🔌 MongoDB connection closed through app termination');
-                process.exit(0);
-            } catch (err) {
-                console.error('Error during MongoDB disconnection:', err);
-                process.exit(1);
-            }
+            await mongoose.connection.close();
+            console.log('🔌 MongoDB connection closed through app termination');
+            process.exit(0);
         });
 
         return conn;
     } catch (error) {
-        console.error('❌ Error connecting to MongoDB:', error);
-        throw new AppError('Database connection failed', 500);
+        console.error('❌ Error connecting to MongoDB:', error.message);
+        // We throw the error so the server startup process can handle it
+        throw error;
     }
 };
 
