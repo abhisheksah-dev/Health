@@ -12,6 +12,7 @@ describe('Authentication Endpoints', () => {
                     name: 'John Doe',
                     email: 'john@example.com',
                     password: 'Password123!',
+                    passwordConfirm: 'Password123!',
                     phoneNumber: '+1234567890',
                     dateOfBirth: '1990-01-01',
                     gender: 'male',
@@ -54,19 +55,23 @@ describe('Authentication Endpoints', () => {
                     name: 'Dr. Jane Smith',
                     email: 'jane@example.com',
                     password: 'Password123!',
+                    passwordConfirm: 'Password123!',
                     phoneNumber: '+1234567890',
                     specialization: 'Cardiology',
                     licenseNumber: 'MD123456',
+                    registrationNumber: 'REG-DOC-001',
+                    consultationFee: 150,
+                    council: {
+                        name: 'Medical Council of India',
+                        year: 2010,
+                        country: 'India'
+                    },
                     qualifications: [{
                         degree: 'MD',
                         institution: 'Harvard Medical School',
                         year: 2010,
                         country: 'USA'
-                    }],
-                    clinicDetails: {
-                        name: 'Heart Care Clinic',
-                        consultationFee: 100
-                    }
+                    }]
                 });
 
             expect(res.statusCode).toBe(201);
@@ -93,7 +98,7 @@ describe('Authentication Endpoints', () => {
 
     describe('POST /api/v1/auth/login', () => {
         beforeEach(async () => {
-            await createTestUser('patient');
+            await createTestUser('patient', 'test@example.com');
         });
 
         it('should login a user with valid credentials', async () => {
@@ -125,7 +130,7 @@ describe('Authentication Endpoints', () => {
 
     describe('GET /api/v1/auth/me', () => {
         it('should get current user profile', async () => {
-            const { token } = await createAuthenticatedRequest();
+            const { token } = await createAuthenticatedRequest('patient', 'me@example.com');
 
             const res = await request(app)
                 .get('/api/v1/auth/me')
@@ -133,7 +138,7 @@ describe('Authentication Endpoints', () => {
 
             expect(res.statusCode).toBe(200);
             expect(res.body.status).toBe('success');
-            expect(res.body.data.user.email).toBe('test@example.com');
+            expect(res.body.data.user.email).toBe('me@example.com');
         });
 
         it('should not get profile without authentication', async () => {
@@ -147,7 +152,7 @@ describe('Authentication Endpoints', () => {
 
     describe('PATCH /api/v1/auth/update-password', () => {
         it('should update user password', async () => {
-            const { token } = await createAuthenticatedRequest();
+            const { token } = await createAuthenticatedRequest('patient', 'updatepass@example.com');
 
             const res = await request(app)
                 .patch('/api/v1/auth/update-password')
@@ -155,6 +160,7 @@ describe('Authentication Endpoints', () => {
                 .send({
                     currentPassword: 'Password123!',
                     newPassword: 'NewPassword123!',
+                    passwordConfirm: 'NewPassword123!'
                 });
 
             expect(res.statusCode).toBe(200);
@@ -163,7 +169,7 @@ describe('Authentication Endpoints', () => {
         });
 
         it('should not update password with wrong current password', async () => {
-            const { token } = await createAuthenticatedRequest();
+            const { token } = await createAuthenticatedRequest('patient', 'wrongpass@example.com');
 
             const res = await request(app)
                 .patch('/api/v1/auth/update-password')
@@ -171,6 +177,7 @@ describe('Authentication Endpoints', () => {
                 .send({
                     currentPassword: 'WrongPassword123!',
                     newPassword: 'NewPassword123!',
+                    passwordConfirm: 'NewPassword123!'
                 });
 
             expect(res.statusCode).toBe(401);

@@ -54,7 +54,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
             url: result.url,
             publicId: result.key,
             name: req.files[index].originalname,
-            type: 'other',
+            type: 'other', // Or derive from mimetype
             uploadedBy: req.user.id
         }));
     }

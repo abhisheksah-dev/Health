@@ -19,4 +19,4 @@ async function sendSMS(to, message) {
   }
 }
 
-module.exports = { sendSMS }; 
+module.exports = { sendSMS };

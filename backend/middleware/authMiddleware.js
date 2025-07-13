@@ -3,7 +3,7 @@ const { promisify } = require('util');
 const User = require('../models/User');
 const AppError = require('../utils/appError');
 const { catchAsync } = require('../utils/catchAsync');
-const crypto = require('crypto');
+const crypto =require('crypto');
 
 exports.protect = catchAsync(async (req, res, next) => {
     let token;
@@ -41,30 +41,26 @@ exports.restrictTo = (...roles) => {
     };
 };
 
-exports.verifyEmail = async (req, res, next) => {
-    try {
-        const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
-        
-        const user = await User.findOne({
-            emailVerificationToken: hashedToken,
-        });
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    
+    const user = await User.findOne({
+        emailVerificationToken: hashedToken,
+    });
 
-        if (!user) {
-            return next(new AppError('Token is invalid or has already been used', 400));
-        }
-
-        user.emailVerified = true;
-        user.emailVerificationToken = undefined;
-        await user.save({ validateBeforeSave: false });
-
-        res.status(200).json({
-            status: 'success',
-            message: 'Email verified successfully. You can now log in.'
-        });
-    } catch (err) {
-        next(new AppError('Email verification failed', 400));
+    if (!user) {
+        return next(new AppError('Token is invalid or has already been used', 400));
     }
-};
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Email verified successfully. You can now log in.'
+    });
+});
 
 exports.isOwner = (Model) => catchAsync(async (req, res, next) => {
     const doc = await Model.findById(req.params.id);
@@ -73,8 +69,9 @@ exports.isOwner = (Model) => catchAsync(async (req, res, next) => {
         return next(new AppError('No document found with that ID', 404));
     }
 
+    // Generic check for ownership field (user, userId, or patient)
     const ownerField = doc.user || doc.userId || doc.patient;
-    if (ownerField && ownerField.toString() !== req.user.id.toString() && req.user.role !== 'admin') {
+    if (ownerField && ownerField.toString() !== req.user.id && req.user.role !== 'admin') {
         return next(new AppError('You do not have permission to perform this action', 403));
     }
 

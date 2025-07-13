@@ -1,21 +1,16 @@
 const MedicationReminder = require('../models/MedicationReminder');
-const User = require('../models/User');
 const { catchAsync } = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
-const { sendNotification } = require('../utils/notifications');
 const { scheduleReminder, cancelReminder } = require('../utils/scheduler');
 
 // Create new medication reminder
 exports.createReminder = catchAsync(async (req, res, next) => {
   const reminder = await MedicationReminder.create({
     ...req.body,
-    user: req.user.id,
-    status: 'active',
-    createdBy: req.user.id
+    user: req.user.id
   });
 
-  // Schedule notifications
   await scheduleReminder(reminder);
 
   res.status(201).json({
@@ -50,15 +45,10 @@ exports.getUserReminders = catchAsync(async (req, res, next) => {
 
 // Get single reminder
 exports.getReminder = catchAsync(async (req, res, next) => {
-  const reminder = await MedicationReminder.findById(req.params.id);
+  const reminder = await MedicationReminder.findOne({ _id: req.params.id, user: req.user.id });
 
   if (!reminder) {
-    return next(new AppError('No reminder found with that ID', 404));
-  }
-
-  // Check if user is authorized to view
-  if (reminder.user.toString() !== req.user.id) {
-    return next(new AppError('You are not authorized to view this reminder', 403));
+    return next(new AppError('No reminder found with that ID for the current user', 404));
   }
 
   res.status(200).json({
@@ -71,26 +61,18 @@ exports.getReminder = catchAsync(async (req, res, next) => {
 
 // Update reminder
 exports.updateReminder = catchAsync(async (req, res, next) => {
-  const reminder = await MedicationReminder.findById(req.params.id);
+  const reminder = await MedicationReminder.findOneAndUpdate(
+    { _id: req.params.id, user: req.user.id },
+    req.body,
+    { new: true, runValidators: true }
+  );
 
   if (!reminder) {
-    return next(new AppError('No reminder found with that ID', 404));
+    return next(new AppError('No reminder found with that ID to update', 404));
   }
 
-  // Check if user is authorized to update
-  if (reminder.user.toString() !== req.user.id) {
-    return next(new AppError('You are not authorized to update this reminder', 403));
-  }
-
-  // Cancel existing scheduled notifications
   await cancelReminder(reminder);
-
-  // Update reminder
-  Object.assign(reminder, req.body);
-  await reminder.save();
-
-  // Reschedule notifications if reminder is active
-  if (reminder.status === 'active') {
+  if (reminder.isActive) {
     await scheduleReminder(reminder);
   }
 
@@ -104,21 +86,13 @@ exports.updateReminder = catchAsync(async (req, res, next) => {
 
 // Delete reminder
 exports.deleteReminder = catchAsync(async (req, res, next) => {
-  const reminder = await MedicationReminder.findById(req.params.id);
+  const reminder = await MedicationReminder.findOneAndDelete({ _id: req.params.id, user: req.user.id });
 
   if (!reminder) {
-    return next(new AppError('No reminder found with that ID', 404));
+    return next(new AppError('No reminder found with that ID to delete', 404));
   }
 
-  // Check if user is authorized to delete
-  if (reminder.user.toString() !== req.user.id) {
-    return next(new AppError('You are not authorized to delete this reminder', 403));
-  }
-
-  // Cancel scheduled notifications
   await cancelReminder(reminder);
-
-  await reminder.remove();
 
   res.status(204).json({
     status: 'success',
@@ -129,26 +103,20 @@ exports.deleteReminder = catchAsync(async (req, res, next) => {
 // Update reminder status
 exports.updateReminderStatus = catchAsync(async (req, res, next) => {
   const { status } = req.body;
-  const reminder = await MedicationReminder.findById(req.params.id);
+  const reminder = await MedicationReminder.findOne({ _id: req.params.id, user: req.user.id });
 
   if (!reminder) {
     return next(new AppError('No reminder found with that ID', 404));
   }
-
-  // Check if user is authorized to update
-  if (reminder.user.toString() !== req.user.id) {
-    return next(new AppError('You are not authorized to update this reminder', 403));
-  }
-
-  // Handle status change
-  if (status === 'active' && reminder.status !== 'active') {
+  
+  reminder.isActive = status === 'active';
+  await reminder.save();
+  
+  if (reminder.isActive) {
     await scheduleReminder(reminder);
-  } else if (status !== 'active' && reminder.status === 'active') {
+  } else {
     await cancelReminder(reminder);
   }
-
-  reminder.status = status;
-  await reminder.save();
 
   res.status(200).json({
     status: 'success',
@@ -160,33 +128,7 @@ exports.updateReminderStatus = catchAsync(async (req, res, next) => {
 
 // Log medication taken
 exports.logMedicationTaken = catchAsync(async (req, res, next) => {
-  const { takenAt, notes } = req.body;
-  const reminder = await MedicationReminder.findById(req.params.id);
-
-  if (!reminder) {
-    return next(new AppError('No reminder found with that ID', 404));
-  }
-
-  // Check if user is authorized to log
-  if (reminder.user.toString() !== req.user.id) {
-    return next(new AppError('You are not authorized to log this reminder', 403));
-  }
-
-  // Add log entry
-  reminder.logs.push({
-    takenAt: new Date(takenAt),
-    notes,
-    loggedBy: req.user.id
-  });
-
-  await reminder.save();
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      reminder
-    }
-  });
+    return next(new AppError('This functionality is not supported by the current MedicationReminder model.', 501));
 });
 
 // Get upcoming reminders
@@ -194,12 +136,9 @@ exports.getUpcomingReminders = catchAsync(async (req, res, next) => {
   const now = new Date();
   const reminders = await MedicationReminder.find({
     user: req.user.id,
-    status: 'active',
-    $or: [
-      { endDate: { $gt: now } },
-      { endDate: null }
-    ]
-  }).sort('nextReminderTime');
+    isActive: true,
+    nextReminder: { $gte: now }
+  }).sort('nextReminder');
 
   res.status(200).json({
     status: 'success',
@@ -212,36 +151,22 @@ exports.getUpcomingReminders = catchAsync(async (req, res, next) => {
 
 // Get reminder statistics
 exports.getReminderStats = catchAsync(async (req, res, next) => {
-  const stats = await MedicationReminder.aggregate([
-    {
-      $match: { user: req.user._id }
-    },
-    {
-      $group: {
-        _id: {
-          status: '$status',
-          month: { $month: '$createdAt' },
-          year: { $year: '$createdAt' }
+    const stats = await MedicationReminder.aggregate([
+        { $match: { user: req.user._id } },
+        {
+            $group: {
+                _id: '$isActive',
+                count: { $sum: 1 }
+            }
         },
-        count: { $sum: 1 },
-        totalLogs: { $sum: { $size: '$logs' } },
-        adherenceRate: {
-          $avg: {
-            $cond: [
-              { $gt: [{ $size: '$logs' }, 0] },
-              {
-                $divide: [
-                  { $size: { $filter: { input: '$logs', as: 'log', cond: { $eq: ['$$log.status', 'taken'] } } } },
-                  { $size: '$logs' }
-                ]
-              },
-              0
-            ]
-          }
+        {
+            $project: {
+                _id: 0,
+                status: { $cond: [ '$_id', 'active', 'inactive' ] },
+                count: '$count'
+            }
         }
-      }
-    }
-  ]);
+    ]);
 
   res.status(200).json({
     status: 'success',
@@ -249,4 +174,4 @@ exports.getReminderStats = catchAsync(async (req, res, next) => {
       stats
     }
   });
-}); 
+});

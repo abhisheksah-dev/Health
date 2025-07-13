@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query } = require('express-validator');
 const healthRecordController = require('../controllers/healthRecordController');
-// Corrected: Changed 'authenticate' to 'protect'
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware'); // Corrected
 const validateRequest = require('../middleware/validateRequest');
 const { validateObjectId } = require('../middleware/validation');
 
@@ -133,7 +132,7 @@ const healthRecordValidation = [
 ];
 
 // Routes
-router.use(protect); // Corrected: Used protect instead of authenticate
+router.use(protect);
 
 // Get all health records for the authenticated user
 router.get('/', [
@@ -149,7 +148,7 @@ router.get('/', [
 
 // Get a specific health record
 router.get('/:id', [
-  param('id').custom(id => validateObjectId(id, 'health record')).withMessage('Invalid health record ID'),
+  param('id').custom(id => validateObjectId(id, 'HealthRecord')).withMessage('Invalid health record ID'),
   validateRequest
 ], healthRecordController.getHealthRecord);
 
@@ -158,20 +157,20 @@ router.post('/', healthRecordValidation, healthRecordController.createHealthReco
 
 // Update a health record
 router.patch('/:id', [
-  param('id').custom(id => validateObjectId(id, 'health record')).withMessage('Invalid health record ID'),
+  param('id').custom(id => validateObjectId(id, 'HealthRecord')).withMessage('Invalid health record ID'),
   ...healthRecordValidation
 ], healthRecordController.updateHealthRecord);
 
 // Delete a health record
 router.delete('/:id', [
-  param('id').custom(id => validateObjectId(id, 'health record')).withMessage('Invalid health record ID'),
+  param('id').custom(id => validateObjectId(id, 'HealthRecord')).withMessage('Invalid health record ID'),
   validateRequest
 ], healthRecordController.deleteHealthRecord);
 
 // Share health record with a doctor
 router.post('/:id/share', [
-  param('id').custom(id => validateObjectId(id, 'health record')).withMessage('Invalid health record ID'),
-  body('doctorId').custom(id => validateObjectId(id, 'doctor')).withMessage('Invalid doctor ID'),
+  param('id').custom(id => validateObjectId(id, 'HealthRecord')).withMessage('Invalid health record ID'),
+  body('doctorId').custom(id => validateObjectId(id, 'Doctor')).withMessage('Invalid doctor ID'),
   body('permissions').optional().isArray(),
   body('permissions.*').isIn(['read', 'write', 'delete']),
   validateRequest
@@ -179,8 +178,8 @@ router.post('/:id/share', [
 
 // Revoke access from a doctor
 router.delete('/:id/share/:doctorId', [
-  param('id').custom(id => validateObjectId(id, 'health record')).withMessage('Invalid health record ID'),
-  param('doctorId').custom(id => validateObjectId(id, 'doctor')).withMessage('Invalid doctor ID'),
+  param('id').custom(id => validateObjectId(id, 'HealthRecord')).withMessage('Invalid health record ID'),
+  param('doctorId').custom(id => validateObjectId(id, 'Doctor')).withMessage('Invalid doctor ID'),
   validateRequest
 ], healthRecordController.revokeAccess);
 

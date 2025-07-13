@@ -4,4 +4,4 @@ async function analyzePrescription (imageUrl) {
   return { confidence: 0.9, medications: [{ name: "StubMed", dosage: "1 mg", frequency: "once a day", duration: "7 days" }] };
 }
 
-module.exports = { analyzePrescription }; 
+module.exports = { analyzePrescription };

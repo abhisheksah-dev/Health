@@ -4,4 +4,4 @@ async function generateMeetingLink (options) {
   return "https://stub.videoconf.example/meeting/" + Date.now();
 }
 
-module.exports = { generateMeetingLink }; 
+module.exports = { generateMeetingLink };

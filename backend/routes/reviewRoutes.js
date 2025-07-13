@@ -54,12 +54,12 @@ const reviewValidation = [
 ];
 
 // Routes
-router.use(protect); // Corrected: Used protect instead of authenticate
+router.use(protect);
 
 // Get all reviews for an entity
 router.get('/entity/:entityType/:entityId', [
   param('entityType').isIn(['doctor', 'hospital', 'clinic', 'pharmacy', 'laboratory', 'diagnostic_center', 'ngo']),
-  param('entityId').custom(id => validateObjectId(id, 'entity')).withMessage('Invalid entity ID'),
+  param('entityId').custom(id => validateObjectId(id, 'Review')), // Adjusted to Review for this context
   query('sort').optional().isIn(['rating', '-rating', 'date', '-date']),
   query('filter').optional().isIn(['positive', 'negative', 'neutral']),
   query('limit').optional().isInt({ min: 1, max: 50 }),
@@ -78,7 +78,7 @@ router.get('/my-reviews', [
 
 // Get a specific review
 router.get('/:id', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   validateRequest
 ], reviewController.getReview);
 
@@ -87,19 +87,19 @@ router.post('/', reviewValidation, reviewController.createReview);
 
 // Update a review
 router.patch('/:id', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   ...reviewValidation
 ], reviewController.updateReview);
 
 // Delete a review
 router.delete('/:id', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   validateRequest
 ], reviewController.deleteReview);
 
 // Report a review
 router.post('/:id/report', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   body('reason')
     .isIn(['inappropriate', 'spam', 'fake', 'offensive', 'other'])
     .withMessage('Invalid report reason'),
@@ -114,19 +114,19 @@ router.post('/:id/report', [
 
 // Like/Unlike a review
 router.post('/:id/like', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   validateRequest
 ], reviewController.toggleLike);
 
 // Get review statistics for an entity
 router.get('/stats/:entityType/:entityId', [
   param('entityType').isIn(['doctor', 'hospital', 'clinic', 'pharmacy', 'laboratory', 'diagnostic_center', 'ngo']),
-  param('entityId').custom(id => validateObjectId(id, 'entity')).withMessage('Invalid entity ID'),
+  param('entityId').custom(id => validateObjectId(id, 'Review')), // Adjusted to Review for this context
   validateRequest
 ], reviewController.getReviewStats);
 
 // Admin routes
-router.use(restrictTo('admin')); // Corrected: Used restrictTo instead of authorize
+router.use(restrictTo('admin'));
 
 // Get all reported reviews
 router.get('/admin/reported', [
@@ -139,7 +139,7 @@ router.get('/admin/reported', [
 
 // Update review report status
 router.patch('/admin/report/:id', [
-  param('id').custom(id => validateObjectId(id, 'review')).withMessage('Invalid review ID'),
+  param('id').custom(id => validateObjectId(id, 'Review')),
   body('status')
     .isIn(['resolved', 'dismissed'])
     .withMessage('Invalid status'),

@@ -26,10 +26,7 @@ exports.getAllSchemes = catchAsync(async (req, res, next) => {
     .limitFields()
     .paginate();
 
-  const schemes = await features.query
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria');
+  const schemes = await features.query;
 
   res.status(200).json({
     status: 'success',
@@ -42,18 +39,11 @@ exports.getAllSchemes = catchAsync(async (req, res, next) => {
 
 // Get single government scheme
 exports.getScheme = catchAsync(async (req, res, next) => {
-  const scheme = await GovernmentScheme.findById(req.params.id)
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria');
+  const scheme = await GovernmentScheme.findById(req.params.id);
 
   if (!scheme) {
     return next(new AppError('No scheme found with that ID', 404));
   }
-
-  // Increment view count
-  scheme.views += 1;
-  await scheme.save();
 
   res.status(200).json({
     status: 'success',
@@ -65,32 +55,21 @@ exports.getScheme = catchAsync(async (req, res, next) => {
 
 // Update government scheme
 exports.updateScheme = catchAsync(async (req, res, next) => {
-  const scheme = await GovernmentScheme.findById(req.params.id);
-
-  if (!scheme) {
-    return next(new AppError('No scheme found with that ID', 404));
-  }
-
-  // Only admin can update schemes
-  if (req.user.role !== 'admin') {
-    return next(new AppError('Only administrators can update government schemes', 403));
-  }
-
   const updatedScheme = await GovernmentScheme.findByIdAndUpdate(
     req.params.id,
     {
       ...req.body,
-      updatedBy: req.user.id,
-      updatedAt: Date.now()
+      'metadata.lastUpdated': Date.now()
     },
     {
       new: true,
       runValidators: true
     }
-  )
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria');
+  );
+
+  if (!updatedScheme) {
+    return next(new AppError('No scheme found with that ID', 404));
+  }
 
   res.status(200).json({
     status: 'success',
@@ -102,18 +81,11 @@ exports.updateScheme = catchAsync(async (req, res, next) => {
 
 // Delete government scheme
 exports.deleteScheme = catchAsync(async (req, res, next) => {
-  const scheme = await GovernmentScheme.findById(req.params.id);
+  const scheme = await GovernmentScheme.findByIdAndDelete(req.params.id);
 
   if (!scheme) {
     return next(new AppError('No scheme found with that ID', 404));
   }
-
-  // Only admin can delete schemes
-  if (req.user.role !== 'admin') {
-    return next(new AppError('Only administrators can delete government schemes', 403));
-  }
-
-  await scheme.remove();
 
   res.status(204).json({
     status: 'success',
@@ -123,36 +95,12 @@ exports.deleteScheme = catchAsync(async (req, res, next) => {
 
 // Search government schemes
 exports.searchSchemes = catchAsync(async (req, res, next) => {
-  const { query, category, state, status } = req.query;
-
-  // Build search query
-  const searchQuery = {};
-
-  if (query) {
-    searchQuery.$or = [
-      { name: { $regex: query, $options: 'i' } },
-      { description: { $regex: query, $options: 'i' } },
-      { benefits: { $regex: query, $options: 'i' } }
-    ];
-  }
-
-  if (category) {
-    searchQuery.categories = category;
-  }
-
-  if (state) {
-    searchQuery.availableStates = state;
-  }
-
-  if (status) {
-    searchQuery.status = status;
-  }
-
-  const schemes = await GovernmentScheme.find(searchQuery)
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria')
-    .sort('-createdAt');
+  const features = new APIFeatures(GovernmentScheme.find(), req.query)
+    .filter()
+    .search()
+    .sort();
+    
+  const schemes = await features.query;
 
   res.status(200).json({
     status: 'success',
@@ -170,9 +118,8 @@ exports.getSchemeStats = catchAsync(async (req, res, next) => {
       $group: {
         _id: '$category',
         totalSchemes: { $sum: 1 },
-        totalViews: { $sum: '$views' },
-        averageBenefitAmount: { $avg: '$benefitAmount' },
-        states: { $addToSet: '$availableStates' }
+        averageFinancialLimit: { $avg: '$benefits.financialSupport.maxLimit' },
+        statesCovered: { $addToSet: '$coverage.geographical.states' }
       }
     }
   ]);
@@ -190,14 +137,10 @@ exports.getActiveSchemesByState = catchAsync(async (req, res, next) => {
   const { state } = req.params;
 
   const schemes = await GovernmentScheme.find({
-    availableStates: state,
+    'coverage.geographical.states': state,
     status: 'active',
-    applicationDeadline: { $gt: new Date() }
-  })
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria')
-    .sort('-createdAt');
+    'validity.endDate': { $gte: new Date() }
+  }).sort('-createdAt');
 
   res.status(200).json({
     status: 'success',
@@ -214,13 +157,10 @@ exports.getUpcomingSchemes = catchAsync(async (req, res, next) => {
 
   const schemes = await GovernmentScheme.find({
     status: 'upcoming',
-    startDate: { $gt: new Date() }
+    'validity.startDate': { $gt: new Date() }
   })
-    .sort('startDate')
-    .limit(parseInt(limit))
-    .populate('createdBy', 'name')
-    .populate('categories')
-    .populate('eligibilityCriteria');
+    .sort('validity.startDate')
+    .limit(parseInt(limit));
 
   res.status(200).json({
     status: 'success',
@@ -229,4 +169,4 @@ exports.getUpcomingSchemes = catchAsync(async (req, res, next) => {
       schemes
     }
   });
-}); 
+});

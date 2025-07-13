@@ -3,6 +3,7 @@ const { body, query, param } = require('express-validator');
 const labReportController = require('../controllers/labReportController');
 const { protect, restrictTo, isOwner } = require('../middleware/authMiddleware');
 const validateRequest = require('../middleware/validateRequest');
+const { validateObjectId } = require('../middleware/validation');
 const LabReport = require('../models/LabReport');
 
 const router = express.Router();
@@ -12,8 +13,8 @@ router.use(protect);
 
 // Validation middleware
 const validateLabReportUpload = [
-    body('doctorId').isMongoId().withMessage('Invalid doctor ID'),
-    body('appointmentId').optional().isMongoId().withMessage('Invalid appointment ID'),
+    body('doctorId').custom(id => validateObjectId(id, 'Doctor')),
+    body('appointmentId').optional().custom(id => validateObjectId(id, 'Appointment')),
     body('labName').trim().notEmpty().withMessage('Laboratory name is required'),
     body('testDate').isISO8601().withMessage('Invalid test date'),
     body('reportDate').isISO8601().withMessage('Invalid report date'),
@@ -60,7 +61,7 @@ router.post(
 // Get lab report by ID
 router.get(
     '/:id',
-    param('id').isMongoId().withMessage('Invalid lab report ID'),
+    param('id').custom(id => validateObjectId(id, 'LabReport')),
     validateRequest,
     labReportController.getLabReport
 );
@@ -68,7 +69,7 @@ router.get(
 // Get patient's lab history
 router.get(
     '/patient/:patientId',
-    param('patientId').isMongoId().withMessage('Invalid patient ID'),
+    param('patientId').custom(id => validateObjectId(id, 'User')),
     query('testType').optional().isIn([
         'blood-test',
         'urine-test',
@@ -91,7 +92,7 @@ router.get(
 // Get critical values
 router.get(
     '/patient/:patientId/critical-values',
-    param('patientId').isMongoId().withMessage('Invalid patient ID'),
+    param('patientId').custom(id => validateObjectId(id, 'User')),
     validateRequest,
     restrictTo('doctor', 'admin'),
     labReportController.getCriticalValues
@@ -100,7 +101,7 @@ router.get(
 // Get test trends
 router.get(
     '/patient/:patientId/trends',
-    param('patientId').isMongoId().withMessage('Invalid patient ID'),
+    param('patientId').custom(id => validateObjectId(id, 'User')),
     query('testType').isIn([
         'blood-test',
         'urine-test',
@@ -120,7 +121,7 @@ router.get(
 // Update lab report
 router.patch(
     '/:id',
-    param('id').isMongoId().withMessage('Invalid lab report ID'),
+    param('id').custom(id => validateObjectId(id, 'LabReport')),
     validateLabReportUpdate,
     isOwner(LabReport),
     labReportController.updateLabReport
@@ -129,7 +130,7 @@ router.patch(
 // Delete lab report
 router.delete(
     '/:id',
-    param('id').isMongoId().withMessage('Invalid lab report ID'),
+    param('id').custom(id => validateObjectId(id, 'LabReport')),
     validateRequest,
     isOwner(LabReport),
     labReportController.deleteLabReport
@@ -138,10 +139,10 @@ router.delete(
 // Retry analysis
 router.post(
     '/:id/retry-analysis',
-    param('id').isMongoId().withMessage('Invalid lab report ID'),
+    param('id').custom(id => validateObjectId(id, 'LabReport')),
     validateRequest,
     isOwner(LabReport),
     labReportController.retryAnalysis
 );
 
-module.exports = router; 
+module.exports = router;

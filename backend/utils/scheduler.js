@@ -9,4 +9,4 @@ async function cancelReminder (reminderId) {
   console.log("Scheduler stub: cancelReminder called for reminderId:", reminderId);
 }
 
-module.exports = { scheduleReminder, cancelReminder }; 
+module.exports = { scheduleReminder, cancelReminder };

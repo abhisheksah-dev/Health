@@ -4,4 +4,4 @@ async function generatePDF (data, options) {
   return { url: "https://stub.pdf.example/healthrecord-" + Date.now() + ".pdf" };
 }
 
-module.exports = { generatePDF }; 
+module.exports = { generatePDF };
