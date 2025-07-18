@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -18,13 +18,12 @@ import EditDoctorProfile from "./pages/EditDoctorProfile";
 import DoctorProfile from "./pages/DoctorProfile";
 import ManageSchedule from "./pages/ManageSchedule";
 import FindDoctor from "./pages/FindDoctor";
+import DoctorDetails from "./pages/DoctorDetails";
 import BookAppointment from "./pages/BookAppointment";
 import MyAppointments from "./pages/MyAppointments";
 import HealthRecords from "./pages/HealthRecords";
 import HealthEducation from "./pages/HealthEducation";
 import FindDonors from "./pages/FindDonors";
-
-// NEWLY CREATED PAGES
 import Telemedicine from "./pages/Telemedicine";
 import SymptomChecker from "./pages/SymptomChecker";
 import EmergencySOS from "./pages/EmergencySOS";
@@ -34,7 +33,7 @@ function App() {
   return (
     <>
       <Navbar />
-      <main className="pt-20 pb-10 bg-gray-50 min-h-screen">
+      <main className="pt-20 pb-10 bg-blue-500">
         <Routes>
           {/* --- Public Routes --- */}
           <Route path="/" element={<Home />} />
@@ -45,6 +44,14 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-email/:token" element={<VerifyEmail />} />
           <Route path="/doctors" element={<FindDoctor />} />
+          <Route
+            path="/doctors/:doctorId"
+            element={
+              <ProtectedRoute>
+                <DoctorDetails />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/health-education" element={<HealthEducation />} />
           <Route path="/find-donors" element={<FindDonors />} />
           <Route path="/telemedicine" element={<Telemedicine />} />

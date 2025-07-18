@@ -81,12 +81,6 @@
     "prettier": "^2.8.7",
     "supertest": "^6.3.3"
   },
-  "lint-staged": {
-    "*.js": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
   "jest": {
     "testEnvironment": "node",
     "setupFiles": [
@@ -99,13 +93,5 @@
   },
   "engines": {
     "node": ">=14.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/healthcare-platform"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/healthcare-platform/issues"
-  },
-  "homepage": "https://github.com/yourusername/healthcare-platform#readme"
+  }
 }

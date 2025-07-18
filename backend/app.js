@@ -73,8 +73,8 @@ const publicHealthRoutes = require('./routes/publicHealthRoutes');
 const labReportRoutes = require('./routes/labReportRoutes');
 const governmentSchemeRoutes = require('./routes/governmentSchemeRoutes');
 const healthEducationRoutes = require('./routes/healthEducationRoutes');
-const clinicRoutes = require('./routes/clinicRoutes'); // Assuming you have clinic routes
-const hospitalRoutes = require('./routes/hospitalRoutes'); // Assuming you have hospital routes
+const clinicRoutes = require('./routes/clinicRoutes');
+const hospitalRoutes = require('./routes/hospitalRoutes');
 
 
 // Import middleware

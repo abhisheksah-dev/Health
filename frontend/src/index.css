@@ -1,13 +1,40 @@
 @import "tailwindcss";
 
+@layer base {
+  body {
+    @apply bg-slate-50 text-gray-800 antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-slate-900;
+  }
+}
+
 @layer components {
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow;
+    @apply w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300;
   }
   .card {
-    @apply bg-white p-6 rounded-lg shadow-md;
+    @apply bg-white p-6 rounded-2xl shadow-lg border border-gray-100;
   }
   .btn-primary {
-    @apply bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all disabled:bg-blue-300;
+    @apply inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-block bg-gray-200 text-gray-700 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300 transition-all duration-300 disabled:opacity-50;
+  }
+  .status-badge {
+    @apply px-2.5 py-1 text-xs font-semibold rounded-full capitalize;
+  }
+  .status-confirmed {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .status-completed {
+    @apply bg-green-100 text-green-800;
+  }
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  .status-cancelled {
+    @apply bg-red-100 text-red-800;
   }
 }
