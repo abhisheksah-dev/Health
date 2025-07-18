@@ -134,21 +134,17 @@ const healthRecordSchema = new mongoose.Schema({
     },
     notes: String,
     attachments: [{
-        type: String, // URLs to attached files
+        url: String, 
         description: String
     }],
     isPrivate: {
         type: Boolean,
         default: false
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+    sharedWith: [{
+        doctor: { type: mongoose.Schema.ObjectId, ref: 'Doctor' },
+        permissions: [{ type: String, enum: ['read', 'write'] }]
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
@@ -159,12 +155,18 @@ const healthRecordSchema = new mongoose.Schema({
 healthRecordSchema.index({ patient: 1, date: -1 });
 healthRecordSchema.index({ doctor: 1, date: -1 });
 healthRecordSchema.index({ type: 1 });
+healthRecordSchema.index({ 'sharedWith.doctor': 1 });
+
 
 // Pre-save middleware to calculate BMI
 healthRecordSchema.pre('save', function(next) {
-    if (this.vitalSigns.weight && this.vitalSigns.height) {
-        const heightInMeters = this.vitalSigns.height / 100;
-        this.vitalSigns.bmi = (this.vitalSigns.weight / (heightInMeters * heightInMeters)).toFixed(1);
+    if (this.isModified('vitalSigns.weight') || this.isModified('vitalSigns.height')) {
+        if (this.vitalSigns && this.vitalSigns.weight && this.vitalSigns.height) {
+            const heightInMeters = this.vitalSigns.height / 100;
+            if (heightInMeters > 0) {
+              this.vitalSigns.bmi = (this.vitalSigns.weight / (heightInMeters * heightInMeters)).toFixed(1);
+            }
+        }
     }
     next();
 });
@@ -203,4 +205,4 @@ healthRecordSchema.statics.getCurrentMedications = async function(patientId) {
 
 const HealthRecord = mongoose.model('HealthRecord', healthRecordSchema);
 
-module.exports = HealthRecord; 
+module.exports = HealthRecord;

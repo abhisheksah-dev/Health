@@ -14,36 +14,37 @@ const { uploadToS3 } = require('../utils/s3');
 
 // Create new appointment
 exports.createAppointment = catchAsync(async (req, res, next) => {
-    const { doctor: doctorId, date, startTime, endTime, type, reason } = req.body;
+    const { doctor: doctorId, date, startTime, type, reason } = req.body;
     let { facility } = req.body;
 
-    // A. Parse facility data since it comes as a string in multipart forms
-    if (facility) {
-      try {
-          facility = JSON.parse(facility);
-          if (!facility.type || !facility.id) {
-              return next(new AppError('Facility object must include a valid type and id.', 400));
-          }
-      } catch (e) {
-          return next(new AppError('Invalid facility data format. It must be a JSON string.', 400));
-      }
-    } else {
-        return next(new AppError('Facility details are required.', 400));
+    // A. Check for facility data
+    if (!facility || !facility.type || !facility.id) {
+        return next(new AppError('Facility object must include a valid type and id.', 400));
     }
-
+    
     // B. Check if the doctor exists
     const doctorDoc = await Doctor.findById(doctorId).populate('user');
     if (!doctorDoc) {
         return next(new AppError('Doctor not found with the provided ID.', 404));
     }
 
-    // C. Check for time slot availability
+    // C. Calculate endTime based on doctor's schedule or a default
+    // This logic assumes doctor's schedule has slotDuration. A default of 30 mins is used otherwise.
+    const schedule = doctorDoc.schedule.find(s => s.facility.id.toString() === facility.id && s.dayOfWeek === new Date(date).getDay());
+    const slotDuration = schedule ? schedule.slotDuration : 30; // Default to 30 minutes if not found
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const endTimeDate = new Date();
+    endTimeDate.setHours(startHour, startMinute + slotDuration, 0, 0);
+    const endTime = endTimeDate.toTimeString().slice(0, 5);
+
+
+    // D. Check for time slot availability
     const isAvailable = await Appointment.checkAvailability(doctorId, facility.id, date, startTime, endTime);
     if (!isAvailable) {
         return next(new AppError('The selected time slot is not available.', 400));
     }
 
-    // D. Handle file uploads
+    // E. Handle file uploads
     let uploadedDocuments = [];
     if (req.files && req.files.length > 0) {
         const uploadPromises = req.files.map(file =>
@@ -59,7 +60,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
         }));
     }
 
-    // E. Create the appointment document
+    // F. Create the appointment document
     const appointment = await Appointment.create({
         patient: req.user.id,
         doctor: doctorId,
@@ -72,7 +73,7 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
         documents: uploadedDocuments
     });
 
-    // F. Send notifications
+    // G. Send notifications
     const patientUser = await User.findById(req.user.id);
     const doctorUser = doctorDoc.user;
 
@@ -82,7 +83,8 @@ exports.createAppointment = catchAsync(async (req, res, next) => {
 
     if (patientUser && doctorUser) {
         const appointmentDetails = {
-            doctorName: doctorUser.name,
+            doctorName: `Dr. ${doctorUser.name}`,
+            patientName: patientUser.name,
             date: appointment.date,
             time: appointment.startTime,
             location
@@ -117,8 +119,11 @@ exports.getAppointment = catchAsync(async (req, res, next) => {
     if (!appointment) {
         return next(new AppError('No appointment found with that ID', 404));
     }
+    
+    // Corrected Authorization: Fetch doctor's user ID for comparison
+    const doctorUserId = appointment.doctor.user._id.toString();
 
-    if (appointment.patient._id.toString() !== req.user.id && appointment.doctor.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (appointment.patient._id.toString() !== req.user.id && doctorUserId !== req.user.id && req.user.role !== 'admin') {
         return next(new AppError('You do not have permission to view this appointment.', 403));
     }
 
@@ -129,6 +134,7 @@ exports.getAppointment = catchAsync(async (req, res, next) => {
         }
     });
 });
+
 
 // Get appointments for the logged-in user (patient or doctor)
 exports.getUserAppointments = catchAsync(async (req, res, next) => {
@@ -141,12 +147,18 @@ exports.getUserAppointments = catchAsync(async (req, res, next) => {
             return res.status(200).json({ status: 'success', results: 0, data: { appointments: [] } });
         }
         filter.doctor = doctorProfile._id;
+    } else { // Admin case
+      // No filter needed, will get all
     }
 
     const features = new APIFeatures(Appointment.find(filter), req.query)
         .filter().sort().limitFields().paginate();
     
-    const appointments = await features.query.populate({ path: 'doctor', populate: { path: 'user', select: 'name' } }).populate('patient', 'name');
+    const appointments = await features.query
+        .populate({ path: 'doctor', populate: { path: 'user', select: 'name' } })
+        .populate('patient', 'name')
+        .populate('facility.id', 'name');
+
 
     res.status(200).json({
         status: 'success',
@@ -184,12 +196,17 @@ exports.getAllAppointments = catchAsync(async (req, res, next) => {
 // Update appointment status (for doctors/admins)
 exports.updateAppointmentStatus = catchAsync(async (req, res, next) => {
     const { status, cancellationReason } = req.body;
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.id).populate({path: 'doctor', select: 'user'});
 
     if (!appointment) {
         return next(new AppError('No appointment found with that ID', 404));
     }
     
+    // Authorization check
+    if(req.user.id.toString() !== appointment.doctor.user.toString() && req.user.role !== 'admin') {
+        return next(new AppError('You do not have permission to update this appointment status.', 403));
+    }
+
     appointment.status = status;
     if (status === 'cancelled' && cancellationReason) {
         appointment.cancellation = { reason: cancellationReason, cancelledBy: req.user.id, cancelledAt: Date.now() };
@@ -213,7 +230,13 @@ exports.cancelAppointment = catchAsync(async (req, res, next) => {
         return next(new AppError('No appointment found with that ID', 404));
     }
 
-    if (appointment.patient.toString() !== req.user.id && req.user.role !== 'admin') {
+    // Allow patient, relevant doctor, or admin to cancel
+    const doctorProfile = await Doctor.findById(appointment.doctor);
+    if (!doctorProfile) {
+        return next(new AppError('Doctor associated with appointment not found.', 404));
+    }
+
+    if (appointment.patient.toString() !== req.user.id && doctorProfile.user.toString() !== req.user.id && req.user.role !== 'admin') {
         return next(new AppError('You do not have permission to cancel this appointment.', 403));
     }
 
@@ -230,35 +253,89 @@ exports.cancelAppointment = catchAsync(async (req, res, next) => {
 // Reschedule an appointment
 exports.rescheduleAppointment = catchAsync(async (req, res, next) => {
     const { date, startTime, endTime } = req.body;
-    const appointment = await Appointment.findByIdAndUpdate(
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+        return next(new AppError('Appointment not found', 404));
+    }
+
+    if (appointment.patient.toString() !== req.user.id && req.user.role !== 'admin') {
+         return next(new AppError('You do not have permission to reschedule this appointment.', 403));
+    }
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
         req.params.id, 
         { date, startTime, endTime, status: 'pending' }, 
         { new: true, runValidators: true }
     );
-    if (!appointment) {
-        return next(new AppError('Appointment not found', 404));
-    }
-    res.status(200).json({
-        status: 'success',
-        data: { appointment }
-    });
-});
-
-// Get available time slots
-exports.getAvailableTimeSlots = catchAsync(async (req, res, next) => {
-    const { doctorId, date } = req.query;
-    if (!doctorId || !date) {
-        return next(new AppError('Doctor ID and date are required parameters.', 400));
-    }
-
-    // Stub implementation
-    const availableSlots = [ '09:00', '10:00', '11:00', '14:00', '15:00', '16:00' ];
     
     res.status(200).json({
         status: 'success',
-        data: {
-            availableSlots
+        data: { appointment: updatedAppointment }
+    });
+});
+
+// Get available time slots (Implemented)
+exports.getAvailableTimeSlots = catchAsync(async (req, res, next) => {
+    const { doctorId, date, facilityId } = req.query;
+    if (!doctorId || !date || !facilityId) {
+        return next(new AppError('Doctor ID, facility ID, and date are required parameters.', 400));
+    }
+
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+        return next(new AppError('Doctor not found', 404));
+    }
+
+    const appointmentDate = new Date(date);
+    const dayOfWeek = appointmentDate.getDay();
+
+    const schedule = doctor.schedule.find(s => s.facility.id.toString() === facilityId && s.dayOfWeek === dayOfWeek && s.isActive);
+
+    if (!schedule) {
+        return res.status(200).json({
+            status: 'success',
+            data: { availableSlots: [] }
+        });
+    }
+
+    const bookedAppointments = await Appointment.find({
+        doctor: doctorId,
+        'facility.id': facilityId,
+        date: appointmentDate,
+        status: { $in: ['pending', 'confirmed'] }
+    }).select('startTime endTime');
+
+    const availableSlots = [];
+    const { startTime, endTime, slotDuration, breakStart, breakEnd } = schedule;
+
+    let currentSlot = new Date(`${date}T${startTime}`);
+    const endOfDay = new Date(`${date}T${endTime}`);
+    const breakStartTime = breakStart ? new Date(`${date}T${breakStart}`) : null;
+    const breakEndTime = breakEnd ? new Date(`${date}T${breakEnd}`) : null;
+
+    while (currentSlot < endOfDay) {
+        const slotEnd = new Date(currentSlot.getTime() + slotDuration * 60000);
+        const currentTimeString = currentSlot.toTimeString().slice(0, 5);
+
+        const isDuringBreak = breakStartTime && breakEndTime && currentSlot >= breakStartTime && currentSlot < breakEndTime;
+        
+        const isBooked = bookedAppointments.some(appt => {
+            const apptStart = new Date(`${date}T${appt.startTime}`);
+            const apptEnd = new Date(`${date}T${appt.endTime}`);
+            return currentSlot < apptEnd && slotEnd > apptStart;
+        });
+
+        if (!isDuringBreak && !isBooked) {
+            availableSlots.push(currentTimeString);
         }
+
+        currentSlot = slotEnd;
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: { availableSlots }
     });
 });
 
@@ -279,7 +356,10 @@ exports.getAppointmentStats = catchAsync(async (req, res, next) => {
     ]);
 
     const result = stats[0] || { totalAppointments: 0, statusCounts: {} };
-    result.completionRate = result.totalAppointments > 0 ? ((result.statusCounts.completed || 0) / result.totalAppointments) * 100 : 0;
+    const totalAppointments = result.totalAppointments || 0;
+    const completedAppointments = result.statusCounts.completed || 0;
+    
+    result.completionRate = totalAppointments > 0 ? (completedAppointments / totalAppointments) * 100 : 0;
 
     res.status(200).json({
         status: 'success',

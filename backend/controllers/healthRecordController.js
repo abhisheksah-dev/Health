@@ -1,5 +1,5 @@
 const HealthRecord = require('../models/HealthRecord');
-const User = require('../models/User');
+const Doctor = require('../models/Doctor');
 const AppError = require('../utils/appError');
 const { catchAsync } = require('../utils/catchAsync');
 const { generatePDF } = require('../utils/pdfGenerator');
@@ -38,7 +38,10 @@ exports.getHealthRecord = catchAsync(async (req, res, next) => {
         return next(new AppError('Health record not found', 404));
     }
 
-    if (record.patient._id.toString() !== req.user.id && req.user.role !== 'admin' && record.doctor._id.toString() !== req.user.id) {
+    const isOwner = record.patient._id.toString() === req.user.id;
+    const isSharedDoctor = record.sharedWith.some(share => share.doctor.toString() === req.user.id);
+
+    if (!isOwner && req.user.role !== 'admin' && !isSharedDoctor) {
         return next(new AppError('You do not have permission to view this health record.', 403));
     }
 
@@ -64,7 +67,7 @@ exports.createHealthRecord = catchAsync(async (req, res, next) => {
 
     const recordData = {
         ...req.body,
-        patient: req.user.id,
+        patient: req.body.patientId || req.user.id, // Can be created by patient or doctor for a patient
         attachments: uploadedAttachments
     };
     
@@ -81,10 +84,14 @@ exports.createHealthRecord = catchAsync(async (req, res, next) => {
 
 // Update a health record
 exports.updateHealthRecord = catchAsync(async (req, res, next) => {
-    const record = await HealthRecord.findOne({ _id: req.params.id, patient: req.user.id });
+    const record = await HealthRecord.findById(req.params.id);
 
     if (!record) {
-        return next(new AppError('Health record not found or you do not have permission to update it.', 404));
+        return next(new AppError('Health record not found', 404));
+    }
+
+    if (record.patient.toString() !== req.user.id && req.user.role !== 'admin') {
+         return next(new AppError('You do not have permission to update it.', 403));
     }
     
     Object.assign(record, req.body);
@@ -100,10 +107,14 @@ exports.updateHealthRecord = catchAsync(async (req, res, next) => {
 
 // Delete a health record
 exports.deleteHealthRecord = catchAsync(async (req, res, next) => {
-    const record = await HealthRecord.findOne({ _id: req.params.id, patient: req.user.id });
+    const record = await HealthRecord.findById(req.params.id);
 
     if (!record) {
-        return next(new AppError('Health record not found or you do not have permission to delete it.', 404));
+        return next(new AppError('Health record not found', 404));
+    }
+    
+    if (record.patient.toString() !== req.user.id && req.user.role !== 'admin') {
+         return next(new AppError('You do not have permission to delete it.', 403));
     }
 
     if (record.attachments && record.attachments.length > 0) {
@@ -125,13 +136,50 @@ exports.deleteHealthRecord = catchAsync(async (req, res, next) => {
 
 // Share health record with a doctor
 exports.shareHealthRecord = catchAsync(async (req, res, next) => {
-    return next(new AppError('Sharing functionality is not supported by the current HealthRecord model.', 501));
+    const { doctorId, permissions } = req.body;
+    const record = await HealthRecord.findById(req.params.id);
+
+    if (!record || record.patient.toString() !== req.user.id) {
+        return next(new AppError('Record not found or you do not have permission to share it.', 404));
+    }
+
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+        return next(new AppError('Doctor not found.', 404));
+    }
+
+    const existingShare = record.sharedWith.find(s => s.doctor.toString() === doctorId);
+    if (existingShare) {
+        existingShare.permissions = permissions || ['read'];
+    } else {
+        record.sharedWith.push({ doctor: doctorId, permissions: permissions || ['read'] });
+    }
+    
+    await record.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Record shared successfully.'
+    });
 });
 
 
 // Revoke access from a doctor
 exports.revokeAccess = catchAsync(async (req, res, next) => {
-    return next(new AppError('Sharing functionality is not supported by the current HealthRecord model.', 501));
+    const { doctorId } = req.params;
+    const record = await HealthRecord.findById(req.params.id);
+
+    if (!record || record.patient.toString() !== req.user.id) {
+        return next(new AppError('Record not found or you do not have permission to modify it.', 404));
+    }
+
+    record.sharedWith = record.sharedWith.filter(s => s.doctor.toString() !== doctorId);
+    await record.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Access revoked successfully.'
+    });
 });
 
 

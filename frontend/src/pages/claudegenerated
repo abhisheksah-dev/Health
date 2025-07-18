@@ -1,0 +1,654 @@
+import React, { useState } from "react";
+import { Heart, User, Mail, Lock, Phone, Calendar, MapPin, Award, Stethoscope, Shield, Sparkles, Star } from "lucide-react";
+
+// Enhanced Patient Signup Component
+const PatientSignup = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    phoneNumber: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (formData.password !== formData.passwordConfirm) {
+      return setError("Passwords do not match.");
+    }
+
+    setLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      alert("Registration successful! Welcome to HealthConnect!");
+    } catch (err) {
+      setError("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-green-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 w-60 h-60 bg-gradient-to-br from-pink-400/10 to-yellow-400/10 rounded-full blur-3xl animate-bounce"></div>
+      </div>
+
+      <div className="relative z-10 bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/20">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
+            <Heart className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Join HealthConnect
+          </h2>
+          <p className="text-gray-600">Your journey to better health starts here</p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6 animate-shake">
+            <p className="flex items-center gap-2">
+              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
+              {error}
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative group">
+            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Full Name"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+              required
+            />
+          </div>
+
+          <div className="relative group">
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Email Address"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+              required
+            />
+          </div>
+
+          <div className="relative group">
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Password (min. 8 characters)"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+              required
+            />
+          </div>
+
+          <div className="relative group">
+            <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              name="passwordConfirm"
+              type="password"
+              value={formData.passwordConfirm}
+              onChange={handleChange}
+              placeholder="Confirm Password"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+              required
+            />
+          </div>
+
+          <div className="relative group">
+            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              name="phoneNumber"
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              placeholder="Phone Number (Optional)"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:from-gray-400 disabled:to-gray-500 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Creating Account...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Create Account
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="text-center mt-8">
+          <p className="text-gray-600">
+            Already have an account?{" "}
+            <button className="font-semibold text-blue-600 hover:text-purple-600 transition-colors cursor-pointer">
+              Sign In
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Doctor Signup Component
+const DoctorSignup = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    passwordConfirm: "",
+    phoneNumber: "",
+    dateOfBirth: "",
+    gender: "male",
+    address: { street: "", city: "", state: "", country: "", zipCode: "" },
+    specializations: [{ name: "" }],
+    qualifications: [{ degree: "", institution: "", year: "", country: "" }],
+    licenseNumber: "",
+    registrationNumber: "",
+    consultationFee: "",
+    languages: "",
+    council: { name: "", year: "", country: "" },
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const handleChange = (e, index, section) => {
+    const { name, value } = e.target;
+    if (section) {
+      const list = [...formData[section]];
+      list[index][name] = value;
+      setFormData((prev) => ({ ...prev, [section]: list }));
+    } else if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: { ...prev[parent], [child]: value },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleAddField = (section) => {
+    setFormData((prev) => ({
+      ...prev,
+      [section]: [
+        ...prev[section],
+        section === "specializations"
+          ? { name: "" }
+          : { degree: "", institution: "", year: "", country: "" },
+      ],
+    }));
+  };
+
+  const handleRemoveField = (index, section) => {
+    const list = [...formData[section]];
+    list.splice(index, 1);
+    setFormData((prev) => ({ ...prev, [section]: list }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.password !== formData.passwordConfirm) {
+      setError("Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      alert("Registration successful! Welcome to HealthConnect, Doctor!");
+    } catch (err) {
+      setError("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const steps = [
+    { id: 1, title: "Personal Info", icon: User },
+    { id: 2, title: "Professional", icon: Stethoscope },
+    { id: 3, title: "Qualifications", icon: Award },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-blue-50 p-4 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="relative z-10 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl mb-4 shadow-lg">
+            <Stethoscope className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+            Doctor Registration
+          </h1>
+          <p className="text-gray-600">Join our network of healthcare professionals</p>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center space-x-4">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${
+                  currentStep >= step.id 
+                    ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg' 
+                    : 'bg-white border-2 border-gray-300 text-gray-400'
+                }`}>
+                  <step.icon className="w-5 h-5" />
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-16 h-1 mx-2 rounded-full transition-all duration-300 ${
+                    currentStep > step.id ? 'bg-gradient-to-r from-emerald-500 to-teal-600' : 'bg-gray-300'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Form Container */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6">
+              <p>{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Step 1: Personal Details */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <User className="w-5 h-5 text-emerald-600" />
+                  Personal Information
+                </h3>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="relative group">
+                    <input
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Full Name"
+                      required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+                  
+                  <div className="relative group">
+                    <input
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="Email Address"
+                      required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+
+                  <div className="relative group">
+                    <input
+                      name="phoneNumber"
+                      type="tel"
+                      value={formData.phoneNumber}
+                      onChange={handleChange}
+                      placeholder="Phone Number"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+
+                  <div className="relative group">
+                    <input
+                      name="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+
+                  <div className="relative group">
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    >
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="relative group">
+                    <input
+                      name="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Password"
+                      required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+                  
+                  <div className="relative group">
+                    <input
+                      name="passwordConfirm"
+                      type="password"
+                      value={formData.passwordConfirm}
+                      onChange={handleChange}
+                      placeholder="Confirm Password"
+                      required
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Professional Details */}
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Stethoscope className="w-5 h-5 text-emerald-600" />
+                  Professional Details
+                </h3>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <input
+                    name="licenseNumber"
+                    value={formData.licenseNumber}
+                    onChange={handleChange}
+                    placeholder="License Number"
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  />
+                  
+                  <input
+                    name="registrationNumber"
+                    value={formData.registrationNumber}
+                    onChange={handleChange}
+                    placeholder="Registration Number"
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  />
+
+                  <input
+                    name="consultationFee"
+                    type="number"
+                    value={formData.consultationFee}
+                    onChange={handleChange}
+                    placeholder="Consultation Fee"
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  />
+
+                  <input
+                    name="languages"
+                    value={formData.languages}
+                    onChange={handleChange}
+                    placeholder="Languages (comma-separated)"
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                  />
+                </div>
+
+                {/* Specializations */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-700">Specializations</h4>
+                  {formData.specializations.map((s, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        name="name"
+                        value={s.name}
+                        onChange={(e) => handleChange(e, i, "specializations")}
+                        placeholder="Specialization"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                      />
+                      {formData.specializations.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveField(i, "specializations")}
+                          className="text-red-500 hover:text-red-700 p-2"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleAddField("specializations")}
+                    className="text-emerald-600 hover:text-emerald-800 text-sm font-medium"
+                  >
+                    + Add Specialization
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Qualifications */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-emerald-600" />
+                  Qualifications & Council
+                </h3>
+                
+                {/* Medical Council */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-700">Medical Council</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <input
+                      name="council.name"
+                      value={formData.council.name}
+                      onChange={handleChange}
+                      placeholder="Council Name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                    <input
+                      name="council.year"
+                      type="number"
+                      value={formData.council.year}
+                      onChange={handleChange}
+                      placeholder="Registration Year"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                    <input
+                      name="council.country"
+                      value={formData.council.country}
+                      onChange={handleChange}
+                      placeholder="Country"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Qualifications */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-700">Qualifications</h4>
+                  {formData.qualifications.map((q, i) => (
+                    <div key={i} className="grid md:grid-cols-5 gap-2 mb-2 items-center">
+                      <input
+                        name="degree"
+                        value={q.degree}
+                        onChange={(e) => handleChange(e, i, "qualifications")}
+                        placeholder="Degree"
+                        className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                      />
+                      <input
+                        name="institution"
+                        value={q.institution}
+                        onChange={(e) => handleChange(e, i, "qualifications")}
+                        placeholder="Institution"
+                        className="md:col-span-2 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                      />
+                      <input
+                        name="year"
+                        type="number"
+                        value={q.year}
+                        onChange={(e) => handleChange(e, i, "qualifications")}
+                        placeholder="Year"
+                        className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                      />
+                      <input
+                        name="country"
+                        value={q.country}
+                        onChange={(e) => handleChange(e, i, "qualifications")}
+                        placeholder="Country"
+                        className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                      />
+                      {formData.qualifications.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveField(i, "qualifications")}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleAddField("qualifications")}
+                    className="text-emerald-600 hover:text-emerald-800 text-sm font-medium"
+                  >
+                    + Add Qualification
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-6">
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep - 1)}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300"
+                >
+                  Previous
+                </button>
+              )}
+              
+              {currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(currentStep + 1)}
+                  className="ml-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="ml-auto px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 disabled:from-gray-400 disabled:to-gray-500 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <Star className="w-5 h-5" />
+                      Complete Registration
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Demo Component to show both forms
+const SignupDemo = () => {
+  const [currentView, setCurrentView] = useState('patient');
+
+  return (
+    <div className="min-h-screen">
+      {/* Toggle Navigation */}
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-lg border border-white/20">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setCurrentView('patient')}
+            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
+              currentView === 'patient' 
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                : 'text-gray-600 hover:text-blue-600'
+            }`}
+          >
+            Patient Signup
+          </button>
+          <button
+            onClick={() => setCurrentView('doctor')}
+            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
+              currentView === 'doctor' 
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg' 
+                : 'text-gray-600 hover:text-emerald-600'
+            }`}
+          >
+            Doctor Signup
+          </button>
+        </div>
+      </div>
+
+      {/* Render Current View */}
+      {currentView === 'patient' ? <PatientSignup /> : <DoctorSignup />}
+    </div>
+  );
+};
+
+export default SignupDemo;

@@ -14,18 +14,24 @@ const signToken = id => {
 
 const createSendToken = (user, statusCode, res) => {
     const token = signToken(user._id);
-    user.password = undefined;
+    
+    // Ensure password is not sent, even if it's part of a combined user object
+    const userResponse = { ...user };
+    if (userResponse.password) {
+        delete userResponse.password;
+    }
 
     res.status(statusCode).json({
         status: 'success',
         token,
         data: {
-            user
+            user: userResponse
         }
     });
 };
 
 exports.registerPatient = catchAsync(async (req, res, next) => {
+    // Corrected: Added bloodGroup to align with frontend and added to User model
     const newUser = await User.create({
         name: req.body.name,
         email: req.body.email,
@@ -34,7 +40,8 @@ exports.registerPatient = catchAsync(async (req, res, next) => {
         phoneNumber: req.body.phoneNumber,
         dateOfBirth: req.body.dateOfBirth,
         gender: req.body.gender,
-        address: req.body.address
+        address: req.body.address,
+        bloodGroup: req.body.bloodGroup
     });
 
     const verificationToken = newUser.createEmailVerificationToken();
@@ -45,9 +52,10 @@ exports.registerPatient = catchAsync(async (req, res, next) => {
         await sendVerificationEmail(newUser.email, verificationURL);
     } catch (err) {
         console.error(`ERROR sending verification email to ${newUser.email}:`, err.message);
+        // Do not block the registration process if email fails. Log it for later.
     }
 
-    createSendToken(newUser, 201, res);
+    createSendToken(newUser.toObject(), 201, res);
 });
 
 exports.registerDoctor = catchAsync(async (req, res, next) => {
@@ -66,7 +74,7 @@ exports.registerDoctor = catchAsync(async (req, res, next) => {
     // 2. Create the detailed doctor profile
     await Doctor.create({
         user: newUser._id,
-        specializations: [{ name: req.body.specialization, verified: false }],
+        specializations: req.body.specializations,
         licenseNumber: req.body.licenseNumber,
         registrationNumber: req.body.registrationNumber,
         council: req.body.council,
@@ -87,7 +95,7 @@ exports.registerDoctor = catchAsync(async (req, res, next) => {
     }
 
     // 4. Send the JWT token
-    createSendToken(newUser, 201, res);
+    createSendToken(newUser.toObject(), 201, res);
 });
 
 
@@ -106,8 +114,18 @@ exports.login = catchAsync(async (req, res, next) => {
     
     user.lastLogin = Date.now();
     await user.save({ validateBeforeSave: false });
+    
+    const userObject = user.toObject();
 
-    createSendToken(user, 200, res);
+    // If user is a doctor, attach their doctor profile
+    if (user.role === 'doctor') {
+        const doctorProfile = await Doctor.findOne({ user: user._id });
+        if(doctorProfile) {
+            userObject.doctorProfile = doctorProfile.toObject();
+        }
+    }
+    
+    createSendToken(userObject, 200, res);
 });
 
 exports.verifyEmail = catchAsync(async (req, res, next) => {
@@ -138,18 +156,22 @@ exports.logout = (req, res) => {
 exports.forgotPassword = catchAsync(async (req, res, next) => {
     const user = await User.findOne({ email: req.body.email });
     if (!user) {
-        return next(new AppError('There is no user with that email address', 404));
+        // To prevent user enumeration, always return a success message
+        return res.status(200).json({
+            status: 'success',
+            message: 'If a user with that email exists, a password reset link has been sent.'
+        });
     }
 
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
     try {
-        const resetURL = `${req.protocol}://${req.get('host')}/api/v1/auth/reset-password/${resetToken}`;
+        const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
         await sendPasswordResetEmail(user.email, resetURL);
         res.status(200).json({
             status: 'success',
-            message: 'Password reset token sent to email'
+            message: 'If a user with that email exists, a password reset link has been sent.'
         });
     } catch (err) {
         user.passwordResetToken = undefined;
@@ -176,7 +198,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
     user.passwordResetExpires = undefined;
     await user.save();
 
-    createSendToken(user, 200, res);
+    createSendToken(user.toObject(), 200, res);
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
@@ -189,7 +211,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
     user.password = req.body.newPassword;
     await user.save();
 
-    createSendToken(user, 200, res);
+    createSendToken(user.toObject(), 200, res);
 });
 
 exports.getMe = (req, res, next) => {

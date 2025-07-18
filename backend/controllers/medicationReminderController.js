@@ -11,6 +11,7 @@ exports.createReminder = catchAsync(async (req, res, next) => {
     user: req.user.id
   });
 
+  // This is a stub function, in a real app it would schedule a job
   await scheduleReminder(reminder);
 
   res.status(201).json({
@@ -102,14 +103,14 @@ exports.deleteReminder = catchAsync(async (req, res, next) => {
 
 // Update reminder status
 exports.updateReminderStatus = catchAsync(async (req, res, next) => {
-  const { status } = req.body;
+  const { isActive } = req.body;
   const reminder = await MedicationReminder.findOne({ _id: req.params.id, user: req.user.id });
 
   if (!reminder) {
     return next(new AppError('No reminder found with that ID', 404));
   }
   
-  reminder.isActive = status === 'active';
+  reminder.isActive = isActive;
   await reminder.save();
   
   if (reminder.isActive) {
@@ -128,7 +129,25 @@ exports.updateReminderStatus = catchAsync(async (req, res, next) => {
 
 // Log medication taken
 exports.logMedicationTaken = catchAsync(async (req, res, next) => {
-    return next(new AppError('This functionality is not supported by the current MedicationReminder model.', 501));
+    const reminder = await MedicationReminder.findOne({ _id: req.params.id, user: req.user.id });
+    if (!reminder) {
+        return next(new AppError('No reminder found with that ID', 404));
+    }
+
+    reminder.logs.push({
+        takenAt: req.body.takenAt || new Date(),
+        status: req.body.status || 'taken',
+        notes: req.body.notes
+    });
+
+    await reminder.save();
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            reminder
+        }
+    });
 });
 
 // Get upcoming reminders
@@ -137,8 +156,8 @@ exports.getUpcomingReminders = catchAsync(async (req, res, next) => {
   const reminders = await MedicationReminder.find({
     user: req.user.id,
     isActive: true,
-    nextReminder: { $gte: now }
-  }).sort('nextReminder');
+    endDate: { $gte: now }
+  }).sort('startDate');
 
   res.status(200).json({
     status: 'success',

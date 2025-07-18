@@ -1,25 +1,31 @@
 const Clinic = require('../models/Clinic');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
-const catchAsync = require('../utils/catchAsync');
+const { catchAsync } = require('../utils/catchAsync'); // Corrected import
 const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
 
+// Helper function to filter object keys
+const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach(el => {
+    if (allowedFields.includes(el)) newObj[el] = obj[el];
+  });
+  return newObj;
+};
+
 // Create new clinic
 exports.createClinic = catchAsync(async (req, res, next) => {
-  // Check if user already has a clinic
   const existingClinic = await Clinic.findOne({ user: req.user.id });
   if (existingClinic) {
     return next(new AppError('User already has a clinic profile', 400));
   }
 
-  // Create clinic
   const clinic = await Clinic.create({
     ...req.body,
     user: req.user.id
   });
 
-  // Update user role if not already admin
   if (req.user.role !== 'admin') {
     await User.findByIdAndUpdate(req.user.id, { role: 'admin' });
   }
@@ -79,12 +85,10 @@ exports.updateClinic = catchAsync(async (req, res, next) => {
     return next(new AppError('No clinic found with that ID', 404));
   }
 
-  // Check if user is authorized to update
   if (clinic.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('You are not authorized to update this clinic', 403));
   }
 
-  // Filter out restricted fields
   const filteredBody = filterObj(
     req.body,
     'name',
@@ -125,14 +129,12 @@ exports.deleteClinic = catchAsync(async (req, res, next) => {
     return next(new AppError('No clinic found with that ID', 404));
   }
 
-  // Check if user is authorized to delete
   if (clinic.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('You are not authorized to delete this clinic', 403));
   }
 
   await clinic.remove();
 
-  // Update user role if needed
   if (req.user.role === 'admin') {
     await User.findByIdAndUpdate(req.user.id, { role: 'patient' });
   }
@@ -151,20 +153,17 @@ exports.addDoctor = catchAsync(async (req, res, next) => {
     return next(new AppError('No clinic found with that ID', 404));
   }
 
-  // Check if user is authorized
   if (clinic.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('You are not authorized to update this clinic', 403));
   }
 
   const { doctorId, position, schedule } = req.body;
 
-  // Verify doctor exists
   const doctor = await Doctor.findById(doctorId);
   if (!doctor) {
     return next(new AppError('Doctor not found', 404));
   }
 
-  // Check if doctor is already added
   const existingDoctor = clinic.doctors.find(
     d => d.doctor.toString() === doctorId
   );
@@ -199,7 +198,6 @@ exports.removeDoctor = catchAsync(async (req, res, next) => {
     return next(new AppError('No clinic found with that ID', 404));
   }
 
-  // Check if user is authorized
   if (clinic.user.toString() !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('You are not authorized to update this clinic', 403));
   }
@@ -307,7 +305,6 @@ exports.updateVerification = catchAsync(async (req, res, next) => {
     return next(new AppError('No clinic found with that ID', 404));
   }
 
-  // Only admin can update verification
   if (req.user.role !== 'admin') {
     return next(new AppError('You are not authorized to update verification', 403));
   }
@@ -328,12 +325,3 @@ exports.updateVerification = catchAsync(async (req, res, next) => {
     }
   });
 });
-
-// Helper function to filter object
-const filterObj = (obj, ...allowedFields) => {
-  const newObj = {};
-  Object.keys(obj).forEach(el => {
-    if (allowedFields.includes(el)) newObj[el] = obj[el];
-  });
-  return newObj;
-};

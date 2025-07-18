@@ -29,7 +29,7 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ['patient', 'doctor', 'hospital', 'clinic', 'admin', 'ngo', 'mental-health-professional', 'service-provider', 'content-creator', 'healthOfficial'],
+        enum: ['patient', 'doctor', 'admin', 'ngo', 'mental-health-professional', 'service-provider', 'content-creator', 'healthOfficial'],
         default: 'patient'
     },
     dateOfBirth: Date,
@@ -43,6 +43,10 @@ const userSchema = new Schema({
         state: String,
         country: String,
         zipCode: String
+    },
+    bloodGroup: {
+        type: String,
+        enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
     },
     avatar: String,
     passwordChangedAt: Date,

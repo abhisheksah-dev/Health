@@ -15,7 +15,7 @@ const app = express();
 // Security middleware
 app.use(helmet());
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || 'http://localhost:5173', // Fallback for frontend dev server
     credentials: true
 }));
 
@@ -29,8 +29,9 @@ app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: process.env.RATE_LIMIT_WINDOW_MS || 60 * 60 * 1000, // 1 hour
-    max: process.env.RATE_LIMIT_MAX || 100 // limit each IP to 100 requests per windowMs
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 200, // limit each IP to 200 requests per windowMs
+    message: 'Too many requests from this IP, please try again in an hour!'
 });
 app.use('/api', limiter);
 
@@ -44,7 +45,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API routes
-app.use('/api/v1/health', (req, res) => {
+app.get('/api/v1/health', (req, res) => {
     res.status(200).json({
         status: 'success',
         message: 'API is running'
@@ -53,7 +54,7 @@ app.use('/api/v1/health', (req, res) => {
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes'); // <-- This was the missing import
+const userRoutes = require('./routes/userRoutes');
 const bloodDonorRoutes = require('./routes/bloodDonorRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const geoFenceRoutes = require('./routes/geoFenceRoutes');
@@ -72,6 +73,8 @@ const publicHealthRoutes = require('./routes/publicHealthRoutes');
 const labReportRoutes = require('./routes/labReportRoutes');
 const governmentSchemeRoutes = require('./routes/governmentSchemeRoutes');
 const healthEducationRoutes = require('./routes/healthEducationRoutes');
+const clinicRoutes = require('./routes/clinicRoutes'); // Assuming you have clinic routes
+const hospitalRoutes = require('./routes/hospitalRoutes'); // Assuming you have hospital routes
 
 
 // Import middleware
@@ -93,15 +96,17 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/emergency', emergencyRoutes);
 app.use('/api/v1/mental-health', mentalHealthRoutes);
-app.use('/api/v1/ngo', ngoRoutes);
+app.use('/api/v1/ngos', ngoRoutes);
 app.use('/api/v1/public-health', publicHealthRoutes);
 app.use('/api/v1/lab-reports', labReportRoutes);
 app.use('/api/v1/government-schemes', governmentSchemeRoutes);
 app.use('/api/v1/health-education', healthEducationRoutes);
+app.use('/api/v1/clinics', clinicRoutes);
+app.use('/api/v1/hospitals', hospitalRoutes);
 
 
-// Error handling middleware
-app.use((req, res, next) => {
+// Error handling middleware for unhandled routes
+app.all('*', (req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
